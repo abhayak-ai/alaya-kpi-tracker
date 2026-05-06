@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alaya HLE - KPI Tracker</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <script>
@@ -46,18 +49,25 @@
 </head>
 <body class="text-slate-800 antialiased">
 
+    <!-- Header -->
     <header class="bg-alaya-900 text-white shadow-md sticky top-0 z-20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
             <div class="flex items-center space-x-3">
                 <i class="fa-solid fa-chart-line text-2xl text-alaya-500"></i>
                 <h1 class="text-xl font-bold tracking-tight">Alaya HLE <span class="font-normal text-alaya-100">| Abhaya's KPI Tracker</span></h1>
             </div>
-            <div class="text-sm font-medium text-alaya-100" id="currentDateDisplay"></div>
+            <div class="text-sm font-medium text-alaya-100 flex items-center gap-4">
+                <span id="currentDateDisplay" class="hidden sm:inline"></span>
+                <button onclick="fetchFromGoogleSheet()" class="bg-alaya-600 hover:bg-alaya-500 px-3 py-1.5 rounded-md transition-colors text-xs font-semibold flex items-center gap-2">
+                    <i id="sync-icon" class="fa-solid fa-rotate"></i> <span id="sync-text">Sync Data</span>
+                </button>
+            </div>
         </div>
     </header>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         
+        <!-- KPI Summary Widgets -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="bg-white rounded-xl shadow-sm p-4 border border-slate-100 flex flex-col justify-center">
                 <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Active Pipeline</p>
@@ -89,7 +99,9 @@
             </div>
         </div>
 
+        <!-- Action Bar -->
         <div class="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+            <!-- Filters -->
             <div class="w-full sm:w-auto overflow-x-auto no-scrollbar flex space-x-2 pb-1 sm:pb-0">
                 <button onclick="setFilter('All')" id="btn-filter-All" class="filter-btn active px-4 py-2 text-sm font-medium rounded-lg bg-alaya-900 text-white whitespace-nowrap transition-colors">All Files</button>
                 <button onclick="setFilter('Pending Conditional')" id="btn-filter-Pending" class="filter-btn px-4 py-2 text-sm font-medium rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap transition-colors">Pending Conditional</button>
@@ -98,6 +110,7 @@
                 <button onclick="setFilter('Settlement')" id="btn-filter-Settlement" class="filter-btn px-4 py-2 text-sm font-medium rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap transition-colors">Settlement</button>
             </div>
             
+            <!-- Actions -->
             <div class="flex w-full sm:w-auto space-x-2 shrink-0">
                 <button onclick="exportToCSV()" class="flex-1 sm:flex-none px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
                     <i class="fa-solid fa-download"></i> Export CSV
@@ -108,11 +121,14 @@
             </div>
         </div>
 
+        <!-- Pipeline Grid -->
         <div id="pipeline-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            </div>
+            <!-- Cards will be injected here via JS -->
+        </div>
 
     </main>
 
+    <!-- Add/Edit File Modal -->
     <div id="file-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-200 overflow-y-auto">
         <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
             <div class="relative bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-2xl w-full" onclick="event.stopPropagation()">
@@ -149,6 +165,7 @@
                                     <option value="Silvia Sapkota">Silvia Sapkota</option>
                                     <option value="Rabin Rai">Rabin Rai</option>
                                     <option value="Gunjan Shree Thapa">Gunjan Shree Thapa</option>
+                                    <option value="Other">Other (Assign Later)</option>
                                 </select>
                             </div>
 
@@ -209,35 +226,58 @@
         </div>
     </div>
 
+    <!-- Scripts -->
     <script>
         const dateOptions = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
         document.getElementById('currentDateDisplay').textContent = new Date().toLocaleDateString('en-US', dateOptions);
 
         let currentFilter = 'All';
-        
-        let files = JSON.parse(localStorage.getItem('alaya_kpi_files_abhaya_v3'));
+        let files = JSON.parse(localStorage.getItem('alaya_kpi_files_live')) || [];
 
-        // PRELOAD ABHAYA'S ACTUAL FILES IF STORAGE IS EMPTY
-        if (!files || files.length === 0) {
-            files = [
-                { id: '1', oppName: 'Dolan, Barry - 2026', stage: 'Pending Conditional', ca: 'Rabin Rai', rating: 0, amount: 0, lender: 'ME Bank', broker: 'Robert Mo', subDate: '2026-03-06', fdd: '', settlement: '', remarks: 'Waiting the update for settlement date and time. Delegated to: Shreenil' },
-                { id: '2', oppName: 'Mousavi, Seyedkasra - Purchase', stage: 'Pending Settlement', ca: 'Gunjan Shree Thapa', rating: 0, amount: 0, lender: 'Bankwest', broker: 'Robert Mo', subDate: '', fdd: '', settlement: '2026-04-08', remarks: 'Val: 29156857. 10:00am AWST. Tracking provided. All good for settlement. Delegated to: Esther' },
-                { id: '3', oppName: 'Trinh, Sandra - Refinance', stage: 'Formally Approved', ca: 'Silvia Sapkota', rating: 0, amount: 0, lender: 'Bankwest', broker: 'Robert Mo', subDate: '', fdd: '', settlement: '', remarks: 'AIP sent.' },
-                { id: '4', oppName: 'Clark, Michael - 2026', stage: 'Pending Settlement', ca: 'Silvia Sapkota', rating: 0, amount: 0, lender: 'Bankwest', broker: 'Robert Mo', subDate: '', fdd: '', settlement: '2026-04-21', remarks: 'Settlement booked. NO ACTION REQUIRED. Settlement on 21/04 at 12:30:00 PM AWST' },
-                { id: '5', oppName: 'Jee, Miran', stage: 'Formally Approved', ca: 'Gunjan Shree Thapa', rating: 9, amount: 0, lender: 'ANZ', broker: 'Robert Mo', subDate: '', fdd: '', settlement: '', remarks: 'AIP valid till 12 April 2026. Settled.' },
-                { id: '6', oppName: 'Storr, Isaac', stage: 'Pending Conditional', ca: 'Silvia Sapkota', rating: 0, amount: 0, lender: 'Westpac', broker: 'Robert Mo', subDate: '', fdd: '2026-03-02', settlement: '2026-04-27', remarks: 'Cooling off expiry: 20 Feb 2026. Pls check for settlement status.' },
-                { id: '7', oppName: 'Mousavi, Seyedkasra - Refinance & Cash out', stage: 'Settlement', ca: 'Gunjan Shree Thapa', rating: 10, amount: 0, lender: 'Bankwest', broker: 'Robert Mo', subDate: '', fdd: '', settlement: '', remarks: 'Settled. Shreeya - 18 march Pre approval sent' }
-            ];
-            localStorage.setItem('alaya_kpi_files_abhaya_v3', JSON.stringify(files));
-        }
+        // --- GOOGLE SHEETS API CONNECTION ---
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/a/macros/homeloanexperts.com.au/s/AKfycbzaac6IHlSpXQ6XbN2qtmVsUU9R6OYBGn2wMLmOVrWEC-E7G6h9_-vqWKZVdLSJHv8/exec";
 
+        // Auto-fetch data on load
         function init() {
             renderCards();
             updateKPIs();
+            fetchFromGoogleSheet(); // Background sync down from sheet
+        }
+
+        // PULL DATA FROM GOOGLE SHEETS
+        function fetchFromGoogleSheet() {
+            const syncText = document.getElementById('sync-text');
+            const syncIcon = document.getElementById('sync-icon');
+            
+            syncText.textContent = "Syncing...";
+            syncIcon.classList.add('fa-spin');
+
+            fetch(GOOGLE_SCRIPT_URL)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && Array.isArray(data)) {
+                        files = data; 
+                        saveData();
+                        renderCards();
+                        
+                        syncText.textContent = "Synced!";
+                        setTimeout(() => syncText.textContent = "Sync Data", 2000);
+                    } else if (data.error) {
+                        console.error("Google Script Error: ", data.error);
+                        syncText.textContent = "Error Syncing";
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching data:", error);
+                    syncText.textContent = "Offline Mode";
+                })
+                .finally(() => {
+                    syncIcon.classList.remove('fa-spin');
+                });
         }
 
         function saveData() {
-            localStorage.setItem('alaya_kpi_files_abhaya_v3', JSON.stringify(files));
+            localStorage.setItem('alaya_kpi_files_live', JSON.stringify(files));
             updateKPIs();
         }
 
@@ -257,25 +297,31 @@
         }
 
         function getStageClassSuffix(stage) {
+            if (!stage) return 'Pending';
             return stage.replace(/\s+/g, '');
         }
 
         function formatDate(dateStr) {
-            if (!dateStr) return '--';
+            if (!dateStr || String(dateStr).trim() === '') return '--';
             const date = new Date(dateStr);
+            if (isNaN(date)) return dateStr; 
             return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
         }
 
         function formatCurrency(amount) {
             if (!amount) return '$0';
-            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
+            const cleanAmount = String(amount).replace(/[^0-9.-]+/g,""); 
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(cleanAmount);
         }
 
         function updateKPIs() {
             const activeFiles = files.filter(f => f.stage !== 'Settlement');
             document.getElementById('kpi-active').textContent = activeFiles.length;
 
-            const totalValue = activeFiles.reduce((sum, f) => sum + (Number(f.amount) || 0), 0);
+            const totalValue = activeFiles.reduce((sum, f) => {
+                const cleanAmount = Number(String(f.amount).replace(/[^0-9.-]+/g,""));
+                return sum + (isNaN(cleanAmount) ? 0 : cleanAmount);
+            }, 0);
             document.getElementById('kpi-value').textContent = formatCurrency(totalValue);
 
             const settledFiles = files.filter(f => f.stage === 'Settlement');
@@ -297,7 +343,10 @@
             const filteredFiles = currentFilter === 'All' ? files : files.filter(f => f.stage === currentFilter);
 
             filteredFiles.forEach(file => {
-                const stageSuffix = getStageClassSuffix(file.stage);
+                let stageSuffix = getStageClassSuffix(file.stage);
+                if(!['PendingConditional', 'FormallyApproved', 'PendingSettlement', 'Settlement'].includes(stageSuffix)) {
+                    stageSuffix = 'Pending'; 
+                }
                 
                 const cardHTML = `
                     <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 border border-slate-100 overflow-hidden flex flex-col relative group">
@@ -305,20 +354,20 @@
                         <div class="p-5 pb-3 border-b border-slate-50 flex justify-between items-start pl-6">
                             <div class="flex-1 pr-2">
                                 <div class="flex items-center gap-2 mb-1">
-                                    <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide stage-badge-${stageSuffix}">${file.stage}</span>
+                                    <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide stage-badge-${stageSuffix}">${file.stage || 'N/A'}</span>
                                 </div>
-                                <h3 class="font-bold text-lg text-slate-800 leading-tight">${file.oppName}</h3>
+                                <h3 class="font-bold text-lg text-slate-800 leading-tight">${file.oppName || 'Unnamed Opportunity'}</h3>
                                 <p class="text-sm text-slate-500 mt-1 flex items-center gap-2">
-                                    <i class="fa-solid fa-building-columns w-3 text-center"></i> ${file.lender || 'TBA'} 
+                                    <i class="fa-solid fa-building-columns w-3 text-center"></i> ${file.lender || '--'} 
                                     <span class="text-slate-300">|</span> 
-                                    <i class="fa-solid fa-user-tie w-3 text-center"></i> ${file.broker || 'TBA'}
+                                    <i class="fa-solid fa-user-tie w-3 text-center"></i> ${file.broker || '--'}
                                 </p>
                             </div>
                             <div class="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button onclick="editFile('${file.id}')" class="text-slate-400 hover:text-alaya-600 transition-colors" title="Edit File">
                                     <i class="fa-solid fa-pen-to-square"></i>
                                 </button>
-                                <button onclick="deleteFile('${file.id}')" class="text-slate-400 hover:text-red-500 transition-colors" title="Delete File">
+                                <button onclick="deleteFile('${file.id}')" class="text-slate-400 hover:text-red-500 transition-colors" title="Delete File (From Dashboard Only)">
                                     <i class="fa-solid fa-trash-can"></i>
                                 </button>
                             </div>
@@ -332,7 +381,7 @@
                                 </div>
                                 <div>
                                     <p class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Assigned CA</p>
-                                    <p class="text-sm font-medium text-slate-700">${file.ca || 'Unassigned'}</p>
+                                    <p class="text-sm font-medium text-slate-700 truncate" title="${file.ca}">${file.ca || '--'}</p>
                                 </div>
                                 <div>
                                     <p class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Important Date</p>
@@ -344,7 +393,7 @@
                                     <span>Latest Remarks</span>
                                     ${file.rating ? `<span class="text-yellow-600 font-bold"><i class="fa-solid fa-star"></i> ${file.rating}/10</span>` : ''}
                                 </p>
-                                <p class="text-sm text-slate-600 italic line-clamp-2" title="${file.remarks}">${file.remarks || 'No remarks added.'}</p>
+                                <p class="text-sm text-slate-600 italic line-clamp-2" title="${file.remarks}">${file.remarks || '--'}</p>
                             </div>
                         </div>
                     </div>
@@ -378,22 +427,40 @@
             document.getElementById('modal-title').textContent = 'Edit File';
             document.getElementById('file-id').value = file.id;
             document.getElementById('opp-name').value = file.oppName;
-            document.getElementById('app-stage').value = file.stage;
-            document.getElementById('ca-name').value = file.ca;
+            
+            const stageDropdown = document.getElementById('app-stage');
+            stageDropdown.value = file.stage;
+            if(!stageDropdown.value) stageDropdown.value = 'Pending Conditional'; 
+            
+            const caDropdown = document.getElementById('ca-name');
+            caDropdown.value = file.ca;
+            if(!caDropdown.value) caDropdown.value = 'Other';
+
             document.getElementById('client-rating').value = file.rating || '';
-            document.getElementById('loan-amount').value = file.amount || '';
+            
+            const cleanAmount = String(file.amount).replace(/[^0-9.-]+/g,"");
+            document.getElementById('loan-amount').value = cleanAmount || '';
+            
             document.getElementById('lender').value = file.lender || '';
             document.getElementById('broker').value = file.broker || '';
-            document.getElementById('sub-date').value = file.subDate || '';
-            document.getElementById('fdd-date').value = file.fdd || '';
-            document.getElementById('settlement-date').value = file.settlement || '';
+            
+            const formatForInput = (rawDate) => {
+                if(!rawDate) return '';
+                const d = new Date(rawDate);
+                if(isNaN(d)) return '';
+                return d.toISOString().split('T')[0];
+            };
+
+            document.getElementById('sub-date').value = formatForInput(file.subDate);
+            document.getElementById('fdd-date').value = formatForInput(file.fdd);
+            document.getElementById('settlement-date').value = formatForInput(file.settlement);
             document.getElementById('remarks').value = file.remarks || '';
 
             openModal();
         }
 
         function deleteFile(id) {
-            if(confirm('Are you sure you want to delete this file? This action cannot be undone.')) {
+            if(confirm('Are you sure you want to delete this file from the Dashboard? (Note: It will not delete it from your Google Sheet automatically).')) {
                 files = files.filter(f => f.id !== id);
                 saveData();
                 renderCards();
@@ -426,7 +493,6 @@
             renderCards();
             closeModal();
 
-            // Trigger the sync to Google Sheets
             syncToGoogleSheet(fileData);
         }
 
@@ -436,7 +502,7 @@
                 return;
             }
 
-            const headers = ["Client Opportunity", "Application Stage", "Credit Analyst", "Lender", "Broker", "Loan Amount ($)", "Client Rating", "Submission Date", "Finance Due Date", "Settlement Date", "Latest Remarks"];
+            const headers = ["ID", "Client Opportunity", "Application Stage", "Credit Analyst", "Lender", "Broker", "Loan Amount ($)", "Client Rating", "Submission Date", "Finance Due Date", "Settlement Date", "Latest Remarks"];
             let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
 
             files.forEach(f => {
@@ -447,7 +513,7 @@
                 };
 
                 const row = [
-                    escapeCSV(f.oppName), escapeCSV(f.stage), escapeCSV(f.ca),
+                    escapeCSV(f.id), escapeCSV(f.oppName), escapeCSV(f.stage), escapeCSV(f.ca),
                     escapeCSV(f.lender), escapeCSV(f.broker), f.amount || 0,
                     f.rating || '', escapeCSV(f.subDate), escapeCSV(f.fdd),
                     escapeCSV(f.settlement), escapeCSV(f.remarks)
@@ -458,27 +524,26 @@
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Abhaya_Active_Files_${new Date().toISOString().split('T')[0]}.csv`);
+            link.setAttribute("download", `Alaya_Pipeline_Export_${new Date().toISOString().split('T')[0]}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         }
 
-        // --- GOOGLE SHEETS SYNC LOGIC ---
-        // Your specific Web App URL is here:
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/a/macros/homeloanexperts.com.au/s/AKfycbzaac6IHlSpXQ6XbN2qtmVsUU9R6OYBGn2wMLmOVrWEC-E7G6h9_-vqWKZVdLSJHv8/exec"; 
-
+        // PUSH DATA TO GOOGLE SHEETS
         function syncToGoogleSheet(data) {
-            // Send the data to the Google Sheet silently in the background
+            const formData = new URLSearchParams();
+            formData.append('data', JSON.stringify(data));
+
             fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors', // Bypasses security blocks for simple form posting
+                mode: 'no-cors', 
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: JSON.stringify(data)
+                body: formData
             }).then(() => {
-                console.log("Data successfully pushed to Google Sheet via Apps Script!");
+                console.log("Data pushed successfully to Google Sheet!");
             }).catch(error => {
                 console.error("Error syncing to Google Sheet:", error);
             });
